@@ -1,3 +1,9 @@
+## 0.5.0 — 2026-10-16
+
+- Show each top-50 truck's listing photo beside its rank and title, linked to the listing. Photos load lazily, send no referrer, and come only from the source's own image service (Penske, Sandhills for TruckPaper/AIM, Charter and Appleton uploads).
+- Use the feed's `thumbnail_url`; a Penske unit's lead photo is also used when the feed has none. A listing without a saved photo, or a photo that fails to load, shows "No saved photo".
+- Widen the identity column (22% to 25%); smaller side-by-side photo at tablet width; phone cards keep a 104px photo.
+
 ## 0.4.0 — 2026-10-16
 
 - Lead with large listed prices in a six-column comparison; expose all weighted scores with labeled bars.

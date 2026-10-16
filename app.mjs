@@ -1,4 +1,4 @@
-import {createFeedClient,renderFeed,observed,freshness,filterItems} from './live.mjs?v=0.4.0';
+import {createFeedClient,renderFeed,observed,freshness,filterItems,NO_PHOTO} from './live.mjs?v=0.5.0';
 export function sortedRows(rows,key){if(!['order','price','miles','fit','life','deal','budget','ease'].includes(key))throw new Error('Unknown comparison metric');const value=r=>r.dataset[key]===''?Infinity:Number(r.dataset[key]);return [...rows].sort((a,b)=>value(a)-value(b)||Number(a.dataset.order)-Number(b.dataset.order));}
 if(typeof document!=='undefined'){
  if(window.matchMedia('(max-width:760px)').matches)document.querySelector('#filters').open=false;
@@ -31,6 +31,8 @@ if(typeof document!=='undefined'){
  for(const toggle of toggles)toggle.addEventListener('click',()=>{toggle.setAttribute('aria-pressed',String(toggle.getAttribute('aria-pressed')!=='true'));arrange();});
  reset.addEventListener('click',()=>{search.value='';for(const t of toggles)t.setAttribute('aria-pressed','false');arrange();});
  body.addEventListener('click',event=>{const button=event.target.closest('[data-expand]');if(!button)return;const row=button.closest('.truck-row'),url=row.dataset.listing;if(expanded.has(url))expanded.delete(url);else expanded.add(url);arrange();});
+ // A photo the source no longer serves falls back to the same placeholder as a listing without one.
+ body.addEventListener('error',event=>{const thumb=event.target instanceof HTMLImageElement&&event.target.closest('.thumb');if(thumb)thumb.outerHTML=NO_PHOTO;},true);
  document.querySelector('#print').addEventListener('click',()=>window.print());
  const client=createFeedClient({onData:data=>{current=data;render();},onStatus:status=>{
   if(current&&freshnessKey()!==lastFreshness)render();state.dataset.connected=String(status.connected);

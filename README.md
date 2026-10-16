@@ -5,6 +5,7 @@ A public, price-first comparison of the current top 50 priced trucks, served by 
 ## Comparison
 
 - Large listed asking prices directly after truck identity, then mileage, overall score, all five weighted metrics and moving equipment.
+- Each truck shows its listing photo beside its identity, linked to the listing. Photos come only from the source's own image service; a truck without a saved photo shows a placeholder.
 - Search model, seller, stock and state; combine price, mileage, moving-body and explicit-attic filters. Filters apply to the published 50 only.
 - Overall ranks stay attached while sorting. P/M positions compare the entire published list with explicit USD/mi units.
 - Expand a truck for source claims, actual point breakdowns, assumptions, unknowns and original observation time.

@@ -3,6 +3,23 @@ export const POLL_MS=15000;
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0;
 export function listingURL(value){try{const u=new URL(value);if(u.protocol!=='https:'||u.username||u.password)return null;return ['www.penskeusedtrucks.com','appleton.wi-autosales.com','www.aimntlsonlineauctions.com','chartertrucks.com','www.truckpaper.com'].includes(u.hostname)?u.href:null;}catch{return null;}}
+// Listing photos come only from each source's own image service, over https.
+export function thumbnailURL(value){
+ try{
+  const u=new URL(value);if(u.protocol!=='https:'||u.username||u.password||u.hash)return null;
+  if(u.hostname==='api.penskeusedtrucks.com')return /^\/b2b\/usedtrucks\/api\/v3\/image\/\d{1,12}\/\d{1,3}$/.test(u.pathname)&&!u.search?u.href:null;
+  if(u.hostname==='media.sandhills.com')return u.pathname==='/img.axd'&&/^\d{1,15}$/.test(u.searchParams.get('id')??'')&&u.searchParams.get('checksum')?u.href:null;
+  if(['chartertrucks.com','appleton.wi-autosales.com'].includes(u.hostname))return /^\/wp-content\/uploads\/[\w./-]+\.(?:jpe?g|png|webp)$/i.test(u.pathname)&&!/logo|icon|placeholder/i.test(u.pathname)?u.href:null;
+ }catch{}
+ return null;
+}
+// The feed's thumbnail; a Penske unit's lead photo also has a fixed address when the feed has none.
+export function thumbnailFor(item){
+ const listed=thumbnailURL(item.thumbnail_url);if(listed)return listed;
+ const unit=listingURL(item.listing_url)?.match(/^https:\/\/www\.penskeusedtrucks\.com\/search-inventory\.html\?\/#\/vehicle-details\?unitNumber=(\d{1,12})$/)?.[1];
+ return unit?`https://api.penskeusedtrucks.com/b2b/usedtrucks/api/v3/image/${unit}/1`:null;
+}
+export const NO_PHOTO='<span class="thumb missing" aria-hidden="true"><span>No saved<br>photo</span></span>';
 export function validateFeed(data){
  if(data?.contract!=='truck-public-feed-v1'||!Array.isArray(data.items)||data.items.length>50||typeof data.revision!=='string'||!Number.isFinite(Date.parse(data.served_at)))throw Error('Invalid feed');
  if(data.ranking_mode==='weighted-top-50'&&!['rubric-v3.2','rubric-v3.3','rubric-v3.4'].includes(data.rubric_version))throw Error('Unsupported rubric');
@@ -46,10 +63,11 @@ export function renderFeed(data,{now=Date.now()}={}){
  const capacity=number(Number(i.liftgate_capacity))&&Number(i.liftgate_capacity)>0?`; listed capacity ${count(Number(i.liftgate_capacity))} lb`:'';
  const tone=i.score>=80?'good':i.score>=70?'info':i.score>=60?'warn':'neutral';
  const metrics=weighted?METRICS.map(([k,max,key])=>`<div class="metric ${key}"><span>${escape(k)}</span><span class="track" aria-hidden="true"><i style="--fill:${Math.max(0,Math.min(100,i.categories[k]/max*100)).toFixed(2)}%"></i></span><strong>${i.categories[k]} / ${max}</strong></div>`).join(''):'Scores unavailable';
- const detailId=`detail-${i.id}`,title=escape(i.title??'Truck listing');
+ const detailId=`detail-${i.id}`,title=escape(i.title??'Truck listing'),photo=thumbnailFor(i);
+ const thumb=photo?`<a class="thumb" href="${escape(listingURL(i.listing_url))}" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"><img src="${escape(photo)}" alt="" width="320" height="240" loading="lazy" decoding="async" referrerpolicy="no-referrer"></a>`:NO_PHOTO;
  const attrs=`data-id="${escape(i.id)}" data-listing="${escape(i.listing_url)}" data-order="${i.overall_rank??''}" data-price="${number(i.price)&&i.currency==='USD'?i.price:''}" data-miles="${number(i.mileage)&&i.mileage_unit==='mi'?i.mileage:''}" ${METRICS.map(([k,,key])=>`data-${key}="${-(i.categories?.[k]??0)}"`).join(' ')}`;
  return `<tr class="truck-row" ${attrs}>
- <th scope="row" class="truck"><span class="position">${rank}</span><a href="${escape(listingURL(i.listing_url))}" target="_blank" rel="noopener noreferrer">${title} <span aria-hidden="true">↗</span></a><small>${escape(i.seller??'Seller unknown')}${i.state?' · '+escape(i.state):''}</small>${i.unverified?'<span class="badge warn identity">Unverified identity</span>':''}${fresh!=='FRESH'?`<span class="badge warn">${fresh}</span>`:''}</th>
+ <th scope="row" class="truck"><div class="identity">${thumb}<div class="identity-text"><span class="position">${rank}</span><a href="${escape(listingURL(i.listing_url))}" target="_blank" rel="noopener noreferrer">${title} <span aria-hidden="true">↗</span></a><small>${escape(i.seller??'Seller unknown')}${i.state?' · '+escape(i.state):''}</small>${i.unverified?'<span class="badge warn identity">Unverified identity</span>':''}${fresh!=='FRESH'?`<span class="badge warn">${fresh}</span>`:''}</div></div></th>
  <td class="asking" data-label="Asking price"><strong class="asking-value">${escape(price)}</strong><span class="badge ${pt.tone}">${pt.label}</span>${p>=0?`<small> · P${p+1} of ${priceOrder.length} priced</small>`:''}</td>
  <td class="mileage" data-label="Mileage"><strong>${escape(mileage)}</strong><span class="badge ${mt.tone}">${mt.label}</span>${m>=0?`<small>M${m+1} of ${milesOrder.length} with mi</small>`:''}</td>
  <td class="score" data-label="Overall score">${weighted?`<strong class="score-value">${i.score}<span>/100</span></strong><span class="badge ${tone}">${escape(i.tier)}</span><small>${i.assumed} assumed points</small>`:'Unranked'}</td>
