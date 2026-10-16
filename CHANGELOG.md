@@ -1,3 +1,8 @@
+## 0.3.0 — 2026-10-16
+
+- Expand to live top 50 using rubric v3.2, automatic reranking, per-category sorting and component breakdowns.
+- Show assumptions and unverified identities; remove the outdated curated-ten fallback.
+
 # Changelog
 
 ## 0.2.0 — 2026-10-16
