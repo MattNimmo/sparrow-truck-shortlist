@@ -20,25 +20,49 @@ export function publicState(i){
  if(i.currency==='USD'&&i.price>55000||i.mileage_unit==='mi'&&i.mileage>170000)return 'ABOVE TARGET — REVIEW';
  return 'INVESTIGATE — NOT QUALIFIED';
 }
+export const METRICS=[['Mover fit',30,'fit'],['Remaining life',25,'life'],['Deal',20,'deal'],['Budget',15,'budget'],['Ease',10,'ease']];
+export function filterItems(items,{query='',price=false,miles=false,mover=false,attic=false}={}){
+ const q=query.trim().toLowerCase();return items.filter(i=>(!q||[i.title,i.seller,i.state].some(v=>String(v??'').toLowerCase().includes(q)))&&(!price||i.currency==='USD'&&number(i.price)&&i.price<=55000)&&(!miles||i.mileage_unit==='mi'&&number(i.mileage)&&i.mileage<=170000)&&(!mover||i.moving_body===true)&&(!attic||i.points?.attic===2));
+}
+function target(value,unit,kind){
+ if(!number(value)||unit!==(kind==='price'?'USD':'mi'))return {tone:'neutral',label:'Unit unconfirmed'};
+ const [lo,hi]=kind==='price'?[29000,55000]:[80000,170000];
+ return value>hi?{tone:'warn',label:'Above target'}:value<lo?{tone:'info',label:'Below target'}:{tone:'good',label:'In target'};
+}
+function tag(label,value){return `<span class="spec-tag ${value===true?'yes':value===false?'no':'unknown'}">${value===true?'✓':value===false?'−':'?'} ${escape(label)}${value==null?' unknown':''}</span>`;}
 export function renderFeed(data,{now=Date.now()}={}){
  validateFeed(data);const eligible=data.items.filter(i=>i.listing_status!=='SOLD');
  const priceOrder=eligible.filter(i=>number(i.price)&&i.currency==='USD').sort((a,b)=>a.price-b.price||a.id.localeCompare(b.id));
  const milesOrder=eligible.filter(i=>number(i.mileage)&&i.mileage_unit==='mi').sort((a,b)=>a.mileage-b.mileage||a.id.localeCompare(b.id));
  return data.items.map(i=>{
- const currentFreshness=freshness(i,now),status=data.ranking_mode==='weighted-top-50'?(i.unverified?'UNVERIFIED IDENTITY — INVESTIGATE':'INVESTIGATE — NOT QUALIFIED'):publicState(i),active=currentFreshness==='FRESH'&&status==='INVESTIGATE — NOT QUALIFIED';
- const weighted=data.ranking_mode==='weighted-top-50';
- const rank=i.overall_rank==null?'Unranked':`${weighted?'Overall':active?'Overall':'Previous overall'} <strong>#${i.overall_rank}</strong>`;
- const rationale=weighted?`${i.assumed} assumed points. Verify: ${i.verify.join(', ')||'No scored spec assumptions'}.`:i.overall_rank!=null?i.rationale:'New investigation candidate outside the original curated ten. It has no overall rank until the full-inventory ranking is implemented.';
+ const weighted=data.ranking_mode==='weighted-top-50',fresh=freshness(i,now),status=weighted?(i.unverified?'UNVERIFIED IDENTITY — INVESTIGATE':'INVESTIGATE — NOT QUALIFIED'):publicState(i);
+ const active=fresh==='FRESH'&&status==='INVESTIGATE — NOT QUALIFIED';
+ const rank=i.overall_rank==null?'Unranked':`${weighted||active?'Overall':'Previous overall'} <strong>#${i.overall_rank}</strong>`;
  const price=number(i.price)?`${i.currency==='USD'?'$':i.currency==='CAD'?'CAD $':''}${count(i.price)}${!['USD','CAD'].includes(i.currency)?' (currency unknown)':''}`:'Unknown';
- const p=priceOrder.indexOf(i),m=milesOrder.indexOf(i);
  const mileage=number(i.mileage)?`${count(i.mileage)} ${['mi','km'].includes(i.mileage_unit)?i.mileage_unit:'(unit unknown)'}`:'Unknown';
+ const p=priceOrder.indexOf(i),m=milesOrder.indexOf(i),pt=target(i.price,i.currency,'price'),mt=target(i.mileage,i.mileage_unit,'miles');
  const body=i.body_length_conflict?'Conflicting body length — verify':`${number(i.body_feet)?count(i.body_feet)+' ft':'Length unknown'}; moving fit: ${yesNo(i.moving_body)}`;
- const capacity=number(Number(i.liftgate_capacity))&&Number(i.liftgate_capacity)>0?`; listed capacity ${count(Number(i.liftgate_capacity))} lb`:'';
  const weight=number(i.gvwr)?`Advertised ${count(i.gvwr)} lb`:`Exact GVWR unknown${i.advertised_gvw?'; GVW claim '+i.advertised_gvw:''}${i.advertised_weight_class?'; '+i.advertised_weight_class:''}`;
- const scoreCells=weighted?`<td class="score"><strong>${i.score}/100</strong><small>${escape(i.tier)}</small><details><summary>Point breakdown</summary><ul>${Object.entries(i.points??{}).map(([k,v])=>`<li>${escape(k)}: ${escape(v)}${i.verify.includes(k)?' · assumed':''}</li>`).join('')}</ul></details><small>${i.assumed} assumed points</small></td>${['Mover fit','Remaining life','Deal','Budget','Ease'].map((k,j)=>`<td>${i.categories[k]} / ${[30,25,20,15,10][j]}</td>`).join('')}`:'';
- return `<tr data-id="${escape(i.id)}" data-order="${i.overall_rank??''}" data-fit="${-(i.categories?.['Mover fit']??0)}" data-life="${-(i.categories?.['Remaining life']??0)}" data-deal="${-(i.categories?.Deal??0)}" data-budget="${-(i.categories?.Budget??0)}" data-ease="${-(i.categories?.Ease??0)}" data-price="${number(i.price)&&i.currency==='USD'?i.price:''}" data-miles="${number(i.mileage)&&i.mileage_unit==='mi'?i.mileage:''}"><th scope="row"><span class="position">${rank}</span><a href="${escape(listingURL(i.listing_url))}" target="_blank" rel="noopener noreferrer">${escape(i.title??'Truck listing')} ↗</a><small>${escape(i.seller??'Seller unknown')}</small><p class="rank-reason">${escape(rationale)}</p></th><td><strong>${escape(status)}</strong><small>${currentFreshness} · ${escape(i.listing_status)}</small><small>Observed ${escape(observed(i.observed_at))}</small></td>${scoreCells}<td>${escape(price)}${p>=0?' · P'+(p+1):''}</td><td>${escape(mileage)}${m>=0?' · M'+(m+1):''}</td><td>${escape(body)}</td><td>${yesNo(i.cummins)} / ${yesNo(i.allison)}</td><td>${yesNo(i.liftgate)}${escape(capacity)}</td><td>${escape(weight)}</td><td>${escape(i.attic??'Unknown')}</td><td>${escape(i.body_width??'Unknown')} / ${escape(height(i.internal_height))}</td></tr>`;
+ const capacity=number(Number(i.liftgate_capacity))&&Number(i.liftgate_capacity)>0?`; listed capacity ${count(Number(i.liftgate_capacity))} lb`:'';
+ const tone=i.score>=80?'good':i.score>=70?'info':i.score>=60?'warn':'neutral';
+ const metrics=weighted?METRICS.map(([k,max,key])=>`<div class="metric ${key}"><span>${escape(k)}</span><span class="track" aria-hidden="true"><i style="--fill:${Math.max(0,Math.min(100,i.categories[k]/max*100)).toFixed(2)}%"></i></span><strong>${i.categories[k]} / ${max}</strong></div>`).join(''):'Scores unavailable';
+ const detailId=`detail-${i.id}`,title=escape(i.title??'Truck listing');
+ const attrs=`data-id="${escape(i.id)}" data-listing="${escape(i.listing_url)}" data-order="${i.overall_rank??''}" data-price="${number(i.price)&&i.currency==='USD'?i.price:''}" data-miles="${number(i.mileage)&&i.mileage_unit==='mi'?i.mileage:''}" ${METRICS.map(([k,,key])=>`data-${key}="${-(i.categories?.[k]??0)}"`).join(' ')}`;
+ return `<tr class="truck-row" ${attrs}>
+ <th scope="row" class="truck"><span class="position">${rank}</span><a href="${escape(listingURL(i.listing_url))}" target="_blank" rel="noopener noreferrer">${title} <span aria-hidden="true">↗</span></a><small>${escape(i.seller??'Seller unknown')}${i.state?' · '+escape(i.state):''}</small>${i.unverified?'<span class="badge warn identity">Unverified identity</span>':''}${fresh!=='FRESH'?`<span class="badge warn">${fresh}</span>`:''}</th>
+ <td class="asking" data-label="Asking price"><strong class="asking-value">${escape(price)}</strong><span class="badge ${pt.tone}">${pt.label}</span>${p>=0?`<small> · P${p+1} of ${priceOrder.length} priced</small>`:''}</td>
+ <td class="mileage" data-label="Mileage"><strong>${escape(mileage)}</strong><span class="badge ${mt.tone}">${mt.label}</span>${m>=0?`<small>M${m+1} of ${milesOrder.length} with mi</small>`:''}</td>
+ <td class="score" data-label="Overall score">${weighted?`<strong class="score-value">${i.score}<span>/100</span></strong><span class="badge ${tone}">${escape(i.tier)}</span><small>${i.assumed} assumed points</small>`:'Unranked'}</td>
+ <td class="metrics" data-label="Weighted scores">${metrics}</td>
+ <td class="setup" data-label="Moving setup"><div class="tags">${tag(number(i.body_feet)?`${i.body_feet} ft`:'Length',i.body_length_conflict?null:number(i.body_feet)?i.body_feet===26:null)}${tag('Moving body',i.moving_body)}${tag('Liftgate',i.liftgate)}${tag('Attic',i.points?.attic===2?true:i.attic==='No'?false:null)}</div><button class="expand" type="button" data-expand="${escape(i.id)}" aria-expanded="false" aria-controls="${escape(detailId)}">Details &amp; score <span aria-hidden="true">＋</span></button></td>
+ </tr><tr class="detail-row" id="${escape(detailId)}" data-detail-for="${escape(i.id)}" hidden><td colspan="6"><div class="detail-grid">
+ <section><h3>Listing evidence</h3><dl>${[['Body',body],['Cummins / Allison',yesNo(i.cummins)+' / '+yesNo(i.allison)],['Liftgate',yesNo(i.liftgate)+capacity],['Weight',weight],['Attic',i.attic??(i.points?.attic===2?'Explicit attic claim in listing text':'Unknown')],['Width / interior height',(i.body_width??'Unknown')+' / '+height(i.internal_height)],['Acquisition estimate',number(i.allin)?'$'+count(i.allin)+' incl. estimated transport':'Unknown']].map(([k,v])=>`<div><dt>${escape(k)}</dt><dd>${escape(v)}</dd></div>`).join('')}</dl></section>
+ <section><h3>Point breakdown</h3><ul class="point-list">${Object.entries(i.points??{}).map(([k,v])=>`<li><span>${escape(k)}${i.verify?.includes(k)?' · assumed':''}</span><strong>${escape(v)}</strong></li>`).join('')}</ul></section>
+ <section><h3>What to verify</h3><p>${weighted?escape(i.assumed)+' assumed points. Estimated points are not confirmed equipment.':escape(i.rationale??'Review the listing evidence.')}</p><ul>${(i.verify??[]).map(k=>`<li>${escape(k)}</li>`).join('')||'<li>Seller availability and mechanical inspection</li>'}</ul><p class="evidence-status">${escape(status)}<br>${fresh} · ${escape(i.listing_status)}<br>Observed ${escape(observed(i.observed_at))}</p></section>
+ </div></td></tr>`;
  }).join('');
 }
+
 export function createFeedClient({fetchFn=fetch,onData,onStatus,now=()=>new Date(),setTimer=setTimeout,clearTimer=clearTimeout}){
  let revision=null,busy=false,lastSuccess=null,timer=null,running=false,first=true;
  async function refresh(){if(busy)return;busy=true;try{const response=await fetchFn(FEED_URL,{cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(12000)});if(!response.ok)throw Error('Feed unavailable');const data=validateFeed(await response.json());if(first||data.revision!==revision){onData(data);revision=data.revision;first=false;}lastSuccess=now();onStatus({connected:true,lastSuccess,data});}catch{onStatus({connected:false,lastSuccess});}finally{busy=false;if(running)timer=setTimer(refresh,POLL_MS);}}
