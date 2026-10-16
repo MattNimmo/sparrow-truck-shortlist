@@ -1,3 +1,11 @@
+## 0.4.0 — 2026-10-16
+
+- Lead with large listed prices in a six-column comparison; expose all weighted scores with labeled bars.
+- Add search and combined price/mileage/body/attic filters, preserving overall ranks.
+- Expand source evidence and point breakdowns on demand; preserve expansion and filters during live updates.
+- Add responsive phone rows, sticky desktop headers, labeled color states and reduced-motion support.
+- Keep rubric, publication scope, source schedule and alerts unchanged.
+
 ## 0.3.2 — 2026-10-16
 
 - Require a real positive USD asking price for every top-50 row; explain and count price exclusions.
