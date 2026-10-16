@@ -1,4 +1,4 @@
-import {createFeedClient,renderFeed,observed,freshness} from './live.mjs?v=0.3.0';
+import {createFeedClient,renderFeed,observed,freshness} from './live.mjs?v=0.3.1';
 export function sortedRows(rows,key){if(!['order','price','miles','fit','life','deal','budget','ease'].includes(key))throw new Error('Unknown comparison metric');const value=r=>r.dataset[key]===''?Infinity:Number(r.dataset[key]);return [...rows].sort((a,b)=>value(a)-value(b));}
 if(typeof document!=='undefined'){
  const sort=document.querySelector('#sort'),body=document.querySelector('tbody'),state=document.querySelector('#live-state'),summary=document.querySelector('#feed-summary');let current=null,lastFreshness=null;
