@@ -1,3 +1,7 @@
+## 0.3.1 — 2026-10-16
+
+- Explain and accept rubric v3.3 with the explicit 2-point attic bonus.
+
 ## 0.3.0 — 2026-10-16
 
 - Expand to live top 50 using rubric v3.2, automatic reranking, per-category sorting and component breakdowns.
