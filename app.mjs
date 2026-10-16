@@ -1,0 +1,2 @@
+export function sortedRows(rows,key){if(!['order','price','miles'].includes(key))throw new Error('Unknown comparison metric');return [...rows].sort((a,b)=>Number(a.dataset[key])-Number(b.dataset[key]));}
+if(typeof document!=='undefined'){document.querySelector('#sort').addEventListener('change',e=>{const body=document.querySelector('tbody');for(const row of sortedRows([...body.rows],e.target.value))body.append(row);});document.querySelector('#print').addEventListener('click',()=>window.print());}
