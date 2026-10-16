@@ -1,3 +1,7 @@
+## 0.3.2 — 2026-10-16
+
+- Require a real positive USD asking price for every top-50 row; explain and count price exclusions.
+
 ## 0.3.1 — 2026-10-16
 
 - Explain and accept rubric v3.3 with the explicit 2-point attic bonus.
