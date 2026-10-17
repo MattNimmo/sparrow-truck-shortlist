@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {validateFeed,renderFeed,createFeedClient,listingURL,freshness,publicState,POLL_MS,filterItems} from './live.mjs?v=0.5.0';
+import test from 'node:test';import assert from 'node:assert/strict';import {validateFeed,renderFeed,createFeedClient,listingURL,freshness,publicState,POLL_MS,filterItems} from './live.mjs?v=0.6.0';
 const t='2026-10-16T14:00:00Z';
 function data(revision='one',patch={}){return {contract:'truck-public-feed-v1',served_at:t,revision,published_count:1,items:[{id:'published-1',overall_rank:1,rationale:'Originally selected',title:'Truck <script>',seller:'Dealer & Co',listing_url:'https://www.truckpaper.com/listing/for-sale/123/truck',observed_at:t,listing_status:'LISTED_UNCONFIRMED',price:43900,currency:'USD',mileage:154000,mileage_unit:'mi',body_feet:26,moving_body:true,cummins:true,allison:true,liftgate:true,gvwr:null,internal_height:'1,210 in',...patch}]};}
 test('live rows escape listing claims, flag invalid dimensions and keep curated rank',()=>{const html=renderFeed(data(),{now:Date.parse(t)});assert.match(html,/Overall <strong>#1/);assert.match(html,/Truck &lt;script&gt;/);assert.ok(!html.includes('Truck <script>'));assert.match(html,/Dealer &amp; Co/);assert.match(html,/Conflicting height claim/);assert.match(html,/FRESH/);assert.match(html,/Observed/);});
@@ -23,7 +23,7 @@ test('filters combine without changing ranks and exclude unknown claims',()=>{
  const items=[{title:'International MV 022592',seller:'AIM',state:'OH',overall_rank:8,price:37900,currency:'USD',mileage:129257,mileage_unit:'mi',moving_body:true,points:{attic:2}},{title:'Freightliner',seller:'Penske',overall_rank:1,price:57000,currency:'USD',mileage:90000,mileage_unit:'mi',moving_body:null,points:{attic:0}},{title:'Box',seller:'Dealer',overall_rank:10,price:30000,currency:null,mileage:100000,mileage_unit:'km',moving_body:false}];
  assert.equal(filterItems(items,{query:'aim',attic:true,price:true,miles:true,mover:true}).length,1);assert.equal(filterItems(items,{query:' OH '})[0].overall_rank,8);assert.equal(filterItems(items,{price:true}).length,1);assert.equal(filterItems(items,{miles:true}).length,2);assert.equal(filterItems(items,{mover:true}).length,1);assert.equal(filterItems(items,{query:'nothing'}).length,0);assert.equal(items[0].overall_rank,8);
 });
-import {thumbnailURL,thumbnailFor,NO_PHOTO} from './live.mjs?v=0.5.0';
+import {thumbnailURL,thumbnailFor,NO_PHOTO} from './live.mjs?v=0.6.0';
 test('thumbnails come only from each source photo service; Penske units have a fixed lead photo',()=>{
  const sandhills='https://media.sandhills.com/img.axd?id=10004401576&wid=4326209787&w=320&h=240&checksum=00RRuPTLsWQuKBDm8eeQLayYtjmy6kVzHNEcFMUQ2N0%3d';
  for(const ok of [sandhills,'https://api.penskeusedtrucks.com/b2b/usedtrucks/api/v3/image/204924/1','https://chartertrucks.com/wp-content/uploads/IMG_6883-3.jpeg'])assert.equal(thumbnailURL(ok),ok);
@@ -39,4 +39,22 @@ test('each row shows a lazy, linked, decorative thumbnail beside its identity, o
  assert.ok(html.indexOf('class="thumb"')<html.indexOf('Truck &lt;script&gt;'));
  d.items[0].thumbnail_url='https://evil.example/x.jpg';html=renderFeed(d,{now:Date.parse(t)});
  assert.ok(html.includes(NO_PHOTO));assert.ok(!html.includes('evil.example'));assert.match(NO_PHOTO,/No saved<br>photo/);
+});
+
+ test('rust labels distinguish clean, penalties and missing evidence and escape no raw notes',async()=>{
+ const {rustLabel}=await import('./live.mjs');
+ assert.equal(rustLabel({}),'Rust · not assessed');
+ for(const [severity,penalty] of Object.entries({none:0,minor:-2,major:-3,extreme:-4})){
+  const i={rust_review:{status:'reviewed',severity,penalty}};
+  assert.ok(rustLabel(i).includes(severity==='none'?'No visible rust':'rust'));
+ }
+ assert.equal(rustLabel({rust_review:{status:'insufficient'}}),'Rust · photos insufficient');
+ assert.equal(rustLabel({rust_review:{status:'stale'}}),'Rust · review expired');
+ assert.equal(rustLabel({rust_review:{status:'reviewed',severity:'none',penalty:-4}}),'Rust · not assessed');
+ });
+
+test('v3.5 displays the applied overall rust deduction and partial photo evidence',()=>{
+ const d=data();d.ranking_mode='weighted-top-50';d.rubric_version='rubric-v3.5';Object.assign(d.items[0],{score:72,tier:'GOOD BUY',categories:{'Mover fit':20,'Remaining life':19,Deal:17,Budget:11,Ease:7},points:{'rust inspection':-2},assumed:3,verify:[],rust_review:{status:'reviewed',severity:'minor',penalty:-2,reviewed_at:t,photo_count:6,coverage:'partial'}});
+ const html=renderFeed(d,{now:Date.parse(t)});assert.match(html,/Minor rust · −2/);assert.match(html,/6 photos; partial coverage/);assert.match(html,/rust inspection/);
+ d.items[0].price=null;assert.throws(()=>validateFeed(d),/Asking price required/);
 });

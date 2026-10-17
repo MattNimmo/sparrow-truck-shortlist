@@ -1,4 +1,4 @@
-import {createFeedClient,renderFeed,observed,freshness,filterItems,NO_PHOTO} from './live.mjs?v=0.5.0';
+import {createFeedClient,renderFeed,observed,freshness,filterItems,NO_PHOTO} from './live.mjs?v=0.6.0';
 export function sortedRows(rows,key){if(!['order','price','miles','fit','life','deal','budget','ease'].includes(key))throw new Error('Unknown comparison metric');const value=r=>r.dataset[key]===''?Infinity:Number(r.dataset[key]);return [...rows].sort((a,b)=>value(a)-value(b)||Number(a.dataset.order)-Number(b.dataset.order));}
 if(typeof document!=='undefined'){
  if(window.matchMedia('(max-width:760px)').matches)document.querySelector('#filters').open=false;
