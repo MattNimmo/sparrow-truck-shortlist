@@ -1,3 +1,7 @@
+# 0.6.0 — 2026-10-16
+
+Show photo rust assessment, overall deduction and review coverage on every top-50 truck; distinguish pending/insufficient/expired from no visible rust. Accept rubric-v3.5.
+
 ## 0.5.0 — 2026-10-16
 
 - Show each top-50 truck's listing photo beside its rank and title, linked to the listing. Photos load lazily, send no referrer, and come only from the source's own image service (Penske, Sandhills for TruckPaper/AIM, Charter and Appleton uploads).
