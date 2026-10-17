@@ -41,12 +41,12 @@ test('each row shows a lazy, linked, decorative thumbnail beside its identity, o
  assert.ok(html.includes(NO_PHOTO));assert.ok(!html.includes('evil.example'));assert.match(NO_PHOTO,/No saved<br>photo/);
 });
 
- test('rust labels distinguish clean, penalties and missing evidence and escape no raw notes',async()=>{
+ test('rust labels distinguish zero deduction, penalties and missing evidence and escape no raw notes',async()=>{
  const {rustLabel}=await import('./live.mjs');
  assert.equal(rustLabel({}),'Rust · not assessed');
  for(const [severity,penalty] of Object.entries({none:0,minor:-2,major:-3,extreme:-4})){
   const i={rust_review:{status:'reviewed',severity,penalty}};
-  assert.ok(rustLabel(i).includes(severity==='none'?'No visible rust':'rust'));
+  assert.ok(rustLabel(i).includes(severity==='none'?'No rust deduction':'rust'));
  }
  assert.equal(rustLabel({rust_review:{status:'insufficient'}}),'Rust · photos insufficient');
  assert.equal(rustLabel({rust_review:{status:'stale'}}),'Rust · review expired');
