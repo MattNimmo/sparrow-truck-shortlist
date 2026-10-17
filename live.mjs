@@ -54,7 +54,7 @@ export function rustLabel(i){
  if(r.status==='insufficient')return 'Rust · photos insufficient';
  const p={none:0,minor:-2,major:-3,extreme:-4}[r.severity];
  if(r.status!=='reviewed'||p===undefined||r.penalty!==p)return 'Rust · not assessed';
- return r.severity==='none'?'No visible rust · 0':`${r.severity[0].toUpperCase()+r.severity.slice(1)} rust · −${-p}`;
+ return r.severity==='none'?'No rust deduction · 0':`${r.severity[0].toUpperCase()+r.severity.slice(1)} rust · −${-p}`;
 }
 export function renderFeed(data,{now=Date.now()}={}){
  validateFeed(data);const eligible=data.items.filter(i=>i.listing_status!=='SOLD');

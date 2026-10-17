@@ -1,3 +1,7 @@
+## 0.6.1 — 2026-10-17
+
+Use “No rust deduction” for assessed zero grades and explain the operator-calibrated range and three reference trucks. Severe steps can earn −4 without visible perforation. Scoring weights and unknown-review behavior remain unchanged.
+
 # 0.6.0 — 2026-10-16
 
 Show photo rust assessment, overall deduction and review coverage on every top-50 truck; distinguish pending/insufficient/expired from no visible rust. Accept rubric-v3.5.
