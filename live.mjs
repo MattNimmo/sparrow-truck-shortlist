@@ -2,7 +2,7 @@ export const FEED_URL='https://mypgatfnwkxtoevabuhb.supabase.co/functions/v1/tru
 export const POLL_MS=15000;
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=value=>typeof value==='number'&&Number.isFinite(value)&&value>=0;
-export function listingURL(value){try{const u=new URL(value);if(u.protocol!=='https:'||u.username||u.password)return null;return ['www.penskeusedtrucks.com','appleton.wi-autosales.com','www.aimntlsonlineauctions.com','chartertrucks.com','www.truckpaper.com'].includes(u.hostname)?u.href:null;}catch{return null;}}
+export function listingURL(value){try{const u=new URL(value);if(u.protocol!=='https:'||u.username||u.password)return null;return ['www.penskeusedtrucks.com','appleton.wi-autosales.com','www.aimusedtrucks.com','www.aimntlsonlineauctions.com','chartertrucks.com','www.truckpaper.com'].includes(u.hostname)?u.href:null;}catch{return null;}}
 // Listing photos come only from each source's own image service, over https.
 export function thumbnailURL(value){
  try{
@@ -90,8 +90,28 @@ export function renderFeed(data,{now=Date.now()}={}){
  }).join('');
 }
 
-export function createFeedClient({fetchFn=fetch,onData,onStatus,now=()=>new Date(),setTimer=setTimeout,clearTimer=clearTimeout}){
+// The feed can answer 503 or stall while it wakes up, so each check gets four tries, 1, 2 and 4 seconds apart.
+export const RETRY_DELAYS=[1000,2000,4000];
+export const ATTEMPTS=RETRY_DELAYS.length+1;
+export const ATTEMPT_TIMEOUT_MS=12000;
+// 5xx, 408, 429, network errors and timeouts are worth another try; another 4xx or an invalid feed is not.
+export const retryableStatus=status=>status>=500&&status<600||status===408||status===429;
+async function feedAttempt(fetchFn){
+ const response=await fetchFn(FEED_URL,{cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(ATTEMPT_TIMEOUT_MS)});
+ if(!response.ok)throw Object.assign(Error(`Feed answered ${response.status}`),{retry:retryableStatus(response.status)});
+ const data=await response.json();
+ try{return validateFeed(data);}catch(error){throw Object.assign(error,{retry:false,invalid:true});}
+}
+export async function fetchFeed({fetchFn=fetch,sleep=ms=>new Promise(r=>setTimeout(r,ms)),onAttempt=()=>{}}={}){
+ for(let attempt=1;;attempt++){
+  onAttempt({attempt,attempts:ATTEMPTS});
+  try{return await feedAttempt(fetchFn);}
+  catch(error){if(error?.retry===false||attempt>=ATTEMPTS)throw Object.assign(Error('Feed unavailable',{cause:error}),{attempts:attempt,invalid:error?.invalid===true});await sleep(RETRY_DELAYS[attempt-1]);}
+ }
+}
+export function createFeedClient({fetchFn=fetch,onData,onStatus,onAttempt=()=>{},now=()=>new Date(),setTimer=setTimeout,clearTimer=clearTimeout,sleep=ms=>new Promise(r=>setTimer(r,ms))}){
  let revision=null,busy=false,lastSuccess=null,timer=null,running=false,first=true;
- async function refresh(){if(busy)return;busy=true;try{const response=await fetchFn(FEED_URL,{cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(12000)});if(!response.ok)throw Error('Feed unavailable');const data=validateFeed(await response.json());if(first||data.revision!==revision){onData(data);revision=data.revision;first=false;}lastSuccess=now();onStatus({connected:true,lastSuccess,data});}catch{onStatus({connected:false,lastSuccess});}finally{busy=false;if(running)timer=setTimer(refresh,POLL_MS);}}
+ // A manual refresh replaces the pending poll rather than starting a second polling loop.
+ async function refresh(){if(busy)return;busy=true;if(timer!==null){clearTimer(timer);timer=null;}try{const data=await fetchFeed({fetchFn,sleep,onAttempt});if(first||data.revision!==revision){onData(data);revision=data.revision;first=false;}lastSuccess=now();onStatus({connected:true,lastSuccess,data});}catch(error){onStatus({connected:false,lastSuccess,attempts:error?.attempts??ATTEMPTS,invalid:error?.invalid===true});}finally{busy=false;if(running)timer=setTimer(refresh,POLL_MS);}}
  return {refresh,start(){if(running)return;running=true;refresh();},stop(){running=false;if(timer!==null)clearTimer(timer);timer=null;}};
 }
