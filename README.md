@@ -12,7 +12,7 @@ A public, price-first comparison of the current top 50 priced trucks, served by 
 - Phone layout keeps prices prominent, retains every metric and uses expandable filters; desktop uses a six-column table with sticky headers.
 - Ranking weights, price eligibility and the attic bonus are unchanged by this design release.
 
-No API keys, database credentials, VINs, raw source evidence, private notes or direct table access appear in the site. A disconnected page keeps the last successful data with an explicit warning. There is no fabricated fallback inventory.
+No API keys, database credentials, VINs, raw source evidence, private notes or direct table access appear in the site. A disconnected page keeps the last successful data with an explicit warning. Each feed check retries a 5xx answer, network error or timeout up to four times (1, 2 and 4 seconds apart); if the first load still fails, the page says so and offers Try again instead of an empty table. There is no fabricated fallback inventory.
 
 Run `npm test`. Preview on `http://127.0.0.1:8771` (the feed's approved local origin). Deploy main to GitHub Pages.
 

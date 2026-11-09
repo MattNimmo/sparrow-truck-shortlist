@@ -1,3 +1,9 @@
+## 0.6.2 — 2026-11-09
+
+Ride out feed hiccups. Each feed check now makes up to four tries, 1, 2 and 4 seconds apart, with a 12-second limit per try, on a 5xx answer, a network error or a timeout. Before the first good feed the table says it is loading and when it is retrying; after the last try it explains the problem and offers Try again, while polling keeps checking every 15 seconds. A manual refresh no longer starts a second polling loop.
+
+Accept listings on AIM's new `www.aimusedtrucks.com` storefront (the feed moved AIM there on 2026-11-09). Until now one such listing made the whole feed invalid, so the page showed no trucks. A feed this page can't read now says so instead of looking like an outage.
+
 ## 0.6.1 — 2026-10-17
 
 Use “No rust deduction” for assessed zero grades and explain the operator-calibrated range and three reference trucks. Severe steps can earn −4 without visible perforation. Scoring weights and unknown-review behavior remain unchanged.

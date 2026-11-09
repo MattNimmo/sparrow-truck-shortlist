@@ -5,3 +5,13 @@ test('public page explains weighted top fifty without stale curated fallback',as
 test('comparison has six decision-first columns, a collapsed method, search and labeled filters',async()=>{
  const html=await readFile(new URL('./index.html',import.meta.url),'utf8'),css=await readFile(new URL('./styles.css',import.meta.url),'utf8');assert.equal((html.match(/<th scope="col">/g)||[]).length,6);assert.ok(html.indexOf('Asking price')<html.indexOf('Weighted scores'));assert.match(html,/<details class="ranking-method">/);assert.match(html,/id="search"/);assert.equal((html.match(/data-filter=/g)||[]).length,4);assert.match(css,/thead\{position:sticky/);assert.match(css,/@media\(max-width:760px\)/);assert.match(css,/prefers-reduced-motion/);assert.match(css,/\[hidden\]\{display:none!important\}/);
 });
+
+import {feedStateRow} from './app.mjs';
+test('before data the table shows loading, then each retry, then a friendly failure with Try again',async()=>{
+ const html=await readFile(new URL('./index.html',import.meta.url),'utf8');
+ assert.match(html,/<tbody><tr class="feed-state loading"><td colspan="6">.*Loading priced trucks/);
+ assert.match(feedStateRow('loading'),/Loading priced trucks from saved inventory/);
+ assert.match(feedStateRow('loading',{attempt:3,attempts:4}),/Trying again \(3 of 4\)/);
+ const failed=feedStateRow('failed',{attempts:4});
+ assert.match(failed,/didn’t load/);assert.match(failed,/didn’t respond after 4 tries/);assert.match(feedStateRow('failed',{attempts:1}),/after 1 try\./);assert.match(feedStateRow('failed',{attempts:1,invalid:true}),/can’t read yet/);assert.match(failed,/<button type="button" class="retry" data-retry>Try again<\/button>/);assert.match(failed,/colspan="6"/);
+});
