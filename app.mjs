@@ -30,7 +30,7 @@ if(typeof document!=='undefined'){
   if(!current)return;
   lastFreshness=freshnessKey();body.innerHTML=renderFeed(current);
   document.querySelector('#rubric-version').textContent=current.rubric_version??'Current rubric';
-  summary.textContent=`${current.rankable_count} priced listings ranked · ${current.excluded_count} known failures, ${current.missing_price_count??0} without a valid USD asking price, and ${current.stale_count} stale/undated listings excluded. Coverage reflects saved exact details; marketplace detail coverage remains partial.`;
+  summary.textContent=`${current.rankable_count} priced listings ranked · ${current.excluded_count} known failures, ${current.missing_price_count??0} without a valid USD asking price, and ${current.stale_count} stale/undated listings outside the fresh ranking.${current.stale_shown_count?` ${current.stale_shown_count} of them fill the open slots below the fresh trucks, marked STALE: last seen over a day ago (up to 30 days), so confirm they're still for sale.`:''} Coverage reflects saved exact details; marketplace detail coverage remains partial.`;
   arrange();
  };
  // Before any data: 'loading' shows each try; 'failed' stays put while background polls keep checking.
