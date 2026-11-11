@@ -1,3 +1,7 @@
+## 0.7.0 — 2026-11-11
+
+Stale trucks stay viewable. When the feed fills open slots with trucks last seen 1–30 days ago (feed 0.18.0), the summary says how many and asks you to confirm they're still for sale. Each stale row's badge shows when it was last seen. Older feeds without `stale_shown_count` read as before.
+
 ## 0.6.2 — 2026-11-09
 
 Ride out feed hiccups. Each feed check now makes up to four tries, 1, 2 and 4 seconds apart, with a 12-second limit per try, on a 5xx answer, a network error or a timeout. Before the first good feed the table says it is loading and when it is retrying; after the last try it explains the problem and offers Try again, while polling keeps checking every 15 seconds. A manual refresh no longer starts a second polling loop.
